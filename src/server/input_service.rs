@@ -667,7 +667,21 @@ fn is_pressed(key: &Key, en: &mut Enigo) -> bool {
 #[inline]
 #[cfg(target_os = "macos")]
 fn key_sleep() {
-    std::thread::sleep(Duration::from_millis(20));
+    // https://www.reddit.com/r/rustdesk/comments/1kn1w5x/typing_lags_when_connecting_to_macos_clients/
+    //
+    // There's a strange bug when running by `launchctl load -w /Library/LaunchAgents/abc.plist`
+    // `std::thread::sleep(Duration::from_millis(20));` may sleep 90ms or more.
+    // Though `/Applications/RustDesk.app/Contents/MacOS/rustdesk --server` in terminal is ok.
+    if crate::is_server() {
+        let now = Instant::now();
+        // This workaround results `21~24ms` sleep time in my tests.
+        // But it works well in my tests.
+        while now.elapsed() < Duration::from_millis(20) {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    } else {
+        std::thread::sleep(Duration::from_millis(20));
+    }
 }
 
 #[inline]
