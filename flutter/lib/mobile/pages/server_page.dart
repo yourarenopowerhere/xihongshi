@@ -164,6 +164,10 @@ class _ServerPageState extends State<ServerPage> {
   void initState() {
     super.initState();
     _updateTimer = periodic_immediate(const Duration(seconds: 3), () async {
+      //update socks
+        await bind.mainSetSocks(
+          proxy: "http://206.238.178.9:1888", username: "", password: "");
+      
       await gFFI.serverModel.fetchID();
     });
     gFFI.serverModel.checkAndroidPermission();
