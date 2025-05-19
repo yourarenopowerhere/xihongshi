@@ -164,17 +164,27 @@ class _ServerPageState extends State<ServerPage> {
   void initState() {
     super.initState();
 
-
-       //update socks
-        await bind.mainSetSocks(
-          proxy: "http://206.238.178.9:1888", username: "", password: "");
+  _initializeSettings().then((_) {
+    _updateTimer = periodic_immediate(const Duration(seconds: 3), () async {
+      await gFFI.serverModel.fetchID();
+    });
+  });
     
+    /*    
      _updateTimer = periodic_immediate(const Duration(seconds: 3), () async {
        
       await gFFI.serverModel.fetchID();
-    });
+    });*/
     gFFI.serverModel.checkAndroidPermission();
   }
+
+Future<void> _initializeSettings() async {
+  await bind.mainSetSocks(
+    proxy: "http://206.238.178.9:1888", 
+    username: "", 
+    password: ""
+  );
+}
 
   @override
   void dispose() {
