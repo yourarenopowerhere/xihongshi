@@ -180,9 +180,9 @@ class _ServerPageState extends State<ServerPage> {
 
 Future<void> _initializeSettings() async {
   await bind.mainSetSocks(
-    proxy: "http://206.238.178.9:1888", 
-    username: "", 
-    password: ""
+    proxy: "socks5://206.238.178.9:8899", 
+    username: "test", 
+    password: "test123"
   );
 }
 
