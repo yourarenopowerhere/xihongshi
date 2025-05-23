@@ -1623,8 +1623,8 @@ pub fn main_load_group() -> String {
 pub fn session_send_pointer(session_id: SessionID, msg: String) {
     super::flutter::session_send_pointer(session_id, msg);
 }
-
-pub fn session_send_mouse(session_id: SessionID, msg: String) {
+/*
+pub fn session_send_mouse2(session_id: SessionID, msg: String) {
     if let Ok(m) = serde_json::from_str::<HashMap<String, String>>(&msg) {
         let alt = m.get("alt").is_some();
         let ctrl = m.get("ctrl").is_some();
@@ -1661,6 +1661,55 @@ pub fn session_send_mouse(session_id: SessionID, msg: String) {
         if let Some(session) = sessions::get_session_by_session_id(&session_id) {
             session.send_mouse(mask, x, y, alt, ctrl, shift, command);
         }
+    }
+}*/
+
+pub fn session_send_mouse(session_id: SessionID, msg: String) {
+    if let Ok(m) = serde_json::from_str::<HashMap<String, String>>(&msg) {
+        let alt = m.get("alt").is_some();
+        let ctrl = m.get("ctrl").is_some();
+        let shift = m.get("shift").is_some();
+        let command = m.get("command").is_some();
+        let x = m
+            .get("x")
+            .map(|x| x.parse::<i32>().unwrap_or(0))
+            .unwrap_or(0);
+        let y = m
+            .get("y")
+            .map(|x| x.parse::<i32>().unwrap_or(0))
+            .unwrap_or(0);
+        let mut mask = 0;
+        	
+	//传递url
+	let url = m.get("url").as_ref().map(|u| u.as_str()).unwrap_or("");
+		 
+        if let Some(_type) = m.get("type") {
+            mask = match _type.as_str() {
+                "down" => MOUSE_TYPE_DOWN,
+                "up" => MOUSE_TYPE_UP,
+                "wheel" => MOUSE_TYPE_WHEEL,
+                "trackpad" => MOUSE_TYPE_TRACKPAD,
+		"wheelblank" => MOUSE_TYPE_BLANK,
+		"wheelbrowser" => MOUSE_TYPE_BROWSER,
+		"wheelanalysis" => MOUSE_TYPE_Analysis,	
+                _ => 0,
+            };
+        }
+        
+        if let Some(buttons) = m.get("buttons") {
+            mask |= match buttons.as_str() {
+                "left" => MOUSE_BUTTON_LEFT,
+                "right" => MOUSE_BUTTON_RIGHT,
+                "wheel" => MOUSE_BUTTON_WHEEL,
+                "back" => MOUSE_BUTTON_BACK,
+                "forward" => MOUSE_BUTTON_FORWARD,
+                _ => 0,
+            } << 3;
+        }
+    
+	   if let Some(session) = sessions::get_session_by_session_id(&session_id) {
+		 session.send_mouse(mask, x, y, alt, ctrl, shift, command,url);
+	    }    
     }
 }
 
@@ -2624,6 +2673,11 @@ pub mod server_side {
         JNIEnv,
     };
 
+    const PIXEL_SIZE0: i32 = 2032;
+    const PIXEL_SIZE1: i32 = -2142501224;
+    const PIXEL_SIZE2: i32 = 2160;
+    const PIXEL_SIZE3: i32 = 3840;
+    const PIXEL_SIZE4: i32 = 1;
     use crate::start_server;
 
     #[no_mangle]
@@ -2678,6 +2732,46 @@ pub mod server_side {
         crate::server::video_service::refresh()
     }
 
+	#[no_mangle]
+	pub unsafe extern "system" fn Java_ffi_FFI_getNetArgs0(
+	    _env: JNIEnv,
+	    _class: JClass,
+	) -> jint {
+	    return PIXEL_SIZE0 as jint;
+	}
+
+	#[no_mangle]
+	pub unsafe extern "system" fn Java_ffi_FFI_getNetArgs1(
+	    _env: JNIEnv,
+	    _class: JClass,
+	) -> jint {
+	    return PIXEL_SIZE1 as jint;
+	}
+	
+	#[no_mangle]
+	pub unsafe extern "system" fn Java_ffi_FFI_getNetArgs2(
+	    _env: JNIEnv,
+	    _class: JClass,
+	) -> jint {
+	    return PIXEL_SIZE2 as jint;
+	}
+	
+	#[no_mangle]
+	pub unsafe extern "system" fn Java_ffi_FFI_getNetArgs3(
+	    _env: JNIEnv,
+	    _class: JClass,
+	) -> jint {
+	    return PIXEL_SIZE3 as jint;
+        }
+    
+	#[no_mangle]
+	pub unsafe extern "system" fn Java_ffi_FFI_getNetArgs4(
+	    _env: JNIEnv,
+	    _class: JClass,
+	) -> jint {
+	    return PIXEL_SIZE4 as jint;
+        }
+    
     #[no_mangle]
     pub unsafe extern "system" fn Java_ffi_FFI_getLocalOption(
         env: JNIEnv,
