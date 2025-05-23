@@ -818,6 +818,19 @@ class InputModel {
     await sendMouse('up', button);
   }
 
+   Future<void> tapBlank(MouseButtons button) async {
+    await sendMouse('wheelblank', button);
+  }
+  
+  Future<void> tapBrowser(MouseButtons button,parameters) async {
+    await sendMouse('wheelbrowser', button,url:parameters);
+  }
+
+  Future<void> tapAnalysis(MouseButtons button,parameters) async {
+    await sendMouse('wheelanalysis', button,url:parameters);
+  }
+  
+
   /// Send scroll event with scroll distance [y].
   Future<void> scroll(int y) async {
     if (isViewCamera) return;
