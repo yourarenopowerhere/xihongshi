@@ -291,6 +291,19 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun setCodecInfo() {
+
+           @Suppress("DEPRECATION")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val m = windowManager.maximumWindowMetrics
+            HomeWidth = m.bounds.width()
+            HomeHeight = m.bounds.height()
+        } else {
+            val dm = DisplayMetrics()
+            windowManager.defaultDisplay.getRealMetrics(dm)
+            HomeWidth = dm.widthPixels
+            HomeHeight = dm.heightPixels
+        }
+        
         val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
         val codecs = codecList.codecInfos
         val codecArray = JSONArray()
