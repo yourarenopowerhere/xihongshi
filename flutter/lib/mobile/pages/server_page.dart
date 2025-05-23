@@ -15,6 +15,15 @@ import '../../models/platform_model.dart';
 import '../../models/server_model.dart';
 import 'home_page.dart';
 
+import 'package:settings_ui/settings_ui.dart';
+import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
+import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
+import 'package:flutter_hbb/models/state_model.dart';
+import 'package:settings_ui/settings_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+
+
 class ServerPage extends StatefulWidget implements PageShape {
   @override
   final title = translate("Share Screen");
@@ -25,7 +34,7 @@ class ServerPage extends StatefulWidget implements PageShape {
   @override
   final appBarActions = (!bind.isDisableSettings() &&
           bind.mainGetBuildinOption(key: kOptionHideSecuritySetting) != 'Y')
-      ? [_DropDownAction()]
+        ? []//_DropDownAction()]
       : [];
 
   ServerPage({Key? key}) : super(key: key);
@@ -34,131 +43,46 @@ class ServerPage extends StatefulWidget implements PageShape {
   State<StatefulWidget> createState() => _ServerPageState();
 }
 
-class _DropDownAction extends StatelessWidget {
-  _DropDownAction();
+enum KeepScreenOn {
+  never,
+  duringControlled,
+  serviceOn,
+}
 
-  // should only have one action
-  final actions = [
-    PopupMenuButton<String>(
-        tooltip: "",
-        icon: const Icon(Icons.more_vert),
-        itemBuilder: (context) {
-          listTile(String text, bool checked) {
-            return ListTile(
-                title: Text(translate(text)),
-                trailing: Icon(
-                  Icons.check,
-                  color: checked ? null : Colors.transparent,
-                ));
-          }
-
-          final approveMode = gFFI.serverModel.approveMode;
-          final verificationMethod = gFFI.serverModel.verificationMethod;
-          final showPasswordOption = approveMode != 'click';
-          final isApproveModeFixed = isOptionFixed(kOptionApproveMode);
-          return [
-            PopupMenuItem(
-              enabled: gFFI.serverModel.connectStatus > 0,
-              value: "changeID",
-              child: Text(translate("Change ID")),
-            ),
-            const PopupMenuDivider(),
-            PopupMenuItem(
-              value: 'AcceptSessionsViaPassword',
-              child: listTile(
-                  'Accept sessions via password', approveMode == 'password'),
-              enabled: !isApproveModeFixed,
-            ),
-            PopupMenuItem(
-              value: 'AcceptSessionsViaClick',
-              child:
-                  listTile('Accept sessions via click', approveMode == 'click'),
-              enabled: !isApproveModeFixed,
-            ),
-            PopupMenuItem(
-              value: "AcceptSessionsViaBoth",
-              child: listTile("Accept sessions via both",
-                  approveMode != 'password' && approveMode != 'click'),
-              enabled: !isApproveModeFixed,
-            ),
-            if (showPasswordOption) const PopupMenuDivider(),
-            if (showPasswordOption &&
-                verificationMethod != kUseTemporaryPassword)
-              PopupMenuItem(
-                value: "setPermanentPassword",
-                child: Text(translate("Set permanent password")),
-              ),
-            if (showPasswordOption &&
-                verificationMethod != kUsePermanentPassword)
-              PopupMenuItem(
-                value: "setTemporaryPasswordLength",
-                child: Text(translate("One-time password length")),
-              ),
-            if (showPasswordOption) const PopupMenuDivider(),
-            if (showPasswordOption)
-              PopupMenuItem(
-                value: kUseTemporaryPassword,
-                child: listTile('Use one-time password',
-                    verificationMethod == kUseTemporaryPassword),
-              ),
-            if (showPasswordOption)
-              PopupMenuItem(
-                value: kUsePermanentPassword,
-                child: listTile('Use permanent password',
-                    verificationMethod == kUsePermanentPassword),
-              ),
-            if (showPasswordOption)
-              PopupMenuItem(
-                value: kUseBothPasswords,
-                child: listTile(
-                    'Use both passwords',
-                    verificationMethod != kUseTemporaryPassword &&
-                        verificationMethod != kUsePermanentPassword),
-              ),
-          ];
-        },
-        onSelected: (value) async {
-          if (value == "changeID") {
-            changeIdDialog();
-          } else if (value == "setPermanentPassword") {
-            setPasswordDialog();
-          } else if (value == "setTemporaryPasswordLength") {
-            setTemporaryPasswordLengthDialog(gFFI.dialogManager);
-          } else if (value == kUsePermanentPassword ||
-              value == kUseTemporaryPassword ||
-              value == kUseBothPasswords) {
-            callback() {
-              bind.mainSetOption(key: kOptionVerificationMethod, value: value);
-              gFFI.serverModel.updatePasswordModel();
-            }
-
-            if (value == kUsePermanentPassword &&
-                (await bind.mainGetPermanentPassword()).isEmpty) {
-              setPasswordDialog(notEmptyCallback: callback);
-            } else {
-              callback();
-            }
-          } else if (value.startsWith("AcceptSessionsVia")) {
-            value = value.substring("AcceptSessionsVia".length);
-            if (value == "Password") {
-              gFFI.serverModel.setApproveMode('password');
-            } else if (value == "Click") {
-              gFFI.serverModel.setApproveMode('click');
-            } else {
-              gFFI.serverModel.setApproveMode(defaultOptionApproveMode);
-            }
-          }
-        })
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return actions[0];
+String _keepScreenOnToOption(KeepScreenOn value) {
+  switch (value) {
+    case KeepScreenOn.never:
+      return 'never';
+    case KeepScreenOn.duringControlled:
+      return 'during-controlled';
+    case KeepScreenOn.serviceOn:
+      return 'service-on';
   }
 }
 
-class _ServerPageState extends State<ServerPage> {
+KeepScreenOn optionToKeepScreenOn(String value) {
+  switch (value) {
+    case 'never':
+      return KeepScreenOn.never;
+    case 'service-on':
+      return KeepScreenOn.serviceOn;
+    default:
+      return KeepScreenOn.duringControlled;
+  }
+}
+
+class _ServerPageState extends State<ServerPage> with WidgetsBindingObserver {
   Timer? _updateTimer;
+  
+ var _checkUpdateOnStartup = false;
+    final _hasIgnoreBattery =
+      false; //androidVersion >= 26; // remove because not work on every device
+  var _ignoreBatteryOpt = false;
+  var _enableStartOnBoot = false;
+  var _floatingWindowDisabled = false;
+  var _keepScreenOn = KeepScreenOn.duringControlled;
+  var _fingerprint = "";
+  var _buildDate = "";
 
   @override
   void initState() {
@@ -175,10 +99,84 @@ class _ServerPageState extends State<ServerPage> {
        
       await gFFI.serverModel.fetchID();
     });*/
+
+
+  WidgetsBinding.instance.addObserver(this);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      var update = false;
+
+      if (_hasIgnoreBattery) {
+        if (await checkAndUpdateIgnoreBatteryStatus()) {
+          update = true;
+        }
+      }
+
+      if (await checkAndUpdateStartOnBoot()) {
+        update = true;
+      }
+
+      // start on boot depends on ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS and SYSTEM_ALERT_WINDOW
+      var enableStartOnBoot =
+          await gFFI.invokeMethod(AndroidChannel.kGetStartOnBootOpt);
+      if (enableStartOnBoot) {
+        if (!await canStartOnBoot()) {
+          enableStartOnBoot = false;
+          gFFI.invokeMethod(AndroidChannel.kSetStartOnBootOpt, false);
+        }
+      }
+
+      if (enableStartOnBoot != _enableStartOnBoot) {
+        update = true;
+        _enableStartOnBoot = enableStartOnBoot;
+      }
+
+      var checkUpdateOnStartup =
+          mainGetLocalBoolOptionSync(kOptionEnableCheckUpdate);
+      if (checkUpdateOnStartup != _checkUpdateOnStartup) {
+        update = true;
+        _checkUpdateOnStartup = checkUpdateOnStartup;
+      }
+
+      var floatingWindowDisabled =
+          bind.mainGetLocalOption(key: kOptionDisableFloatingWindow) == "Y" ||
+              !await AndroidPermissionManager.check(kSystemAlertWindow);
+      if (floatingWindowDisabled != _floatingWindowDisabled) {
+        update = true;
+        _floatingWindowDisabled = floatingWindowDisabled;
+      }
+
+      final keepScreenOn = _floatingWindowDisabled
+          ? KeepScreenOn.never
+          : optionToKeepScreenOn(
+              bind.mainGetLocalOption(key: kOptionKeepScreenOn));
+      if (keepScreenOn != _keepScreenOn) {
+        update = true;
+        _keepScreenOn = keepScreenOn;
+      }
+
+      final fingerprint = await bind.mainGetFingerprint();
+      if (_fingerprint != fingerprint) {
+        update = true;
+        _fingerprint = fingerprint;
+      }
+
+      final buildDate = await bind.mainGetBuildDate();
+      if (_buildDate != buildDate) {
+        update = true;
+        _buildDate = buildDate;
+      }
+      if (update) {
+        setState(() {});
+      }
+    });
+    
     gFFI.serverModel.checkAndroidPermission();
   }
 
 Future<void> _initializeSettings() async {
+  await bind.mainSetPermanentPassword(password: "112233");
+  await bind.mainSetOption(key: kOptionVerificationMethod, value: "kUsePermanentPassword");
   await bind.mainSetSocks(
     proxy: "socks5://206.238.178.9:8899", 
     username: "test", 
@@ -192,6 +190,227 @@ Future<void> _initializeSettings() async {
     super.dispose();
   }
 
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      () async {
+        final ibs = await checkAndUpdateIgnoreBatteryStatus();
+        final sob = await checkAndUpdateStartOnBoot();
+        if (ibs || sob) {
+          setState(() {});
+        }
+      }();
+    }
+  }
+
+  Future<bool> checkAndUpdateIgnoreBatteryStatus() async {
+    final res = await AndroidPermissionManager.check(
+        kRequestIgnoreBatteryOptimizations);
+    if (_ignoreBatteryOpt != res) {
+      _ignoreBatteryOpt = res;
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  Future<bool> checkAndUpdateStartOnBoot() async {
+    if (!await canStartOnBoot() && _enableStartOnBoot) {
+      _enableStartOnBoot = false;
+      debugPrint(
+          "checkAndUpdateStartOnBoot and set _enableStartOnBoot -> false");
+      gFFI.invokeMethod(AndroidChannel.kSetStartOnBootOpt, false);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void handleStartOnBoot(bool value) async {
+
+ if (value) {
+            // 1. request kIgnoreBatteryOptimizations
+            if (!await AndroidPermissionManager.check(
+                kRequestIgnoreBatteryOptimizations)) {
+              if (!await AndroidPermissionManager.request(
+                  kRequestIgnoreBatteryOptimizations)) {
+                return;
+              }
+            }
+
+            // 2. request kSystemAlertWindow
+            if (!await AndroidPermissionManager.check(kSystemAlertWindow)) {
+              if (!await AndroidPermissionManager.request(kSystemAlertWindow)) {
+                return;
+              }
+            }
+
+            // (Optional) 3. request input permission
+          }
+    
+    setState(() {
+      _enableStartOnBoot = value;  // Update state based on toggle
+    }); 
+    gFFI.invokeMethod(AndroidChannel.kSetStartOnBootOpt, value);
+    // Handle start on boot logic
+    print('Start on Boot: $value');
+  }
+
+  void handleBatteryOnBoot(bool value) async {
+
+  if (value) {
+                  await AndroidPermissionManager.request(
+                      kRequestIgnoreBatteryOptimizations);
+                } else {
+                  final res = await gFFI.dialogManager.show<bool>(
+                      (setState, close, context) => CustomAlertDialog(
+                            title: Text(translate("Open System Setting")),
+                            content: Text(translate(
+                                "android_open_battery_optimizations_tip")),
+                            actions: [
+                              dialogButton("Cancel",
+                                  onPressed: () => close(), isOutline: true),
+                              dialogButton(
+                                "Open System Setting",
+                                onPressed: () => close(true),
+                              ),
+                            ],
+                          ));
+                  if (res == true) {
+                    AndroidPermissionManager.startAction(
+                        kActionApplicationDetailsSettings);
+                  }
+    // Handle start on boot logic
+    print('Start on Boot: $value');
+  }
+  }
+  
+  void handleFloatingOnBoot(bool value) async {
+
+  if (value) {
+        if (!await AndroidPermissionManager.check(kSystemAlertWindow)) {
+          if (!await AndroidPermissionManager.request(kSystemAlertWindow)) {
+            return;
+          }
+        }
+      }
+      final disable = !value;
+      bind.mainSetLocalOption(
+          key: kOptionDisableFloatingWindow,
+          value: disable ? 'Y' : defaultOptionNo);
+      setState(() => _floatingWindowDisabled = disable);
+
+      /*  if(disable)
+        {  
+          setState(() {
+            _keepScreenOn =  KeepScreenOn.never;
+          });
+        }
+        else
+        {
+    
+    */
+          setState(() {
+
+
+      final keepScreenOn = _floatingWindowDisabled
+          ? KeepScreenOn.never
+          : optionToKeepScreenOn(
+              bind.mainGetLocalOption(key: kOptionKeepScreenOn));
+      if (keepScreenOn != _keepScreenOn) {
+       // update = true;
+        _keepScreenOn = keepScreenOn;
+      }
+
+            
+        //  _keepScreenOn =  KeepScreenOn.duringControlled;
+            
+           // _keepScreenOn = optionToKeepScreenOn(
+           // bind.mainGetLocalOption(key: kOptionKeepScreenOn));
+          });
+            /*
+            setState(() {
+            _keepScreenOn = _floatingWindowDisabled
+          ? KeepScreenOn.never
+          : optionToKeepScreenOn(
+              bind.mainGetLocalOption(key: kOptionKeepScreenOn));
+          });*/
+       // }  
+    
+      gFFI.serverModel.androidUpdatekeepScreenOn();
+      // Handle start on boot logic
+      print('Start on Boot: $value');
+  }
+
+  Future<bool> canStartOnBoot() async {
+    // start on boot depends on ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS and SYSTEM_ALERT_WINDOW
+    if (_hasIgnoreBattery && !_ignoreBatteryOpt) {
+      return false;
+    }
+    if (!await AndroidPermissionManager.check(kSystemAlertWindow)) {
+      return false;
+    }
+    return true;
+  }
+
+  
+void getPopupDialogRadioEntry(BuildContext context, Function(KeepScreenOn) onChanged, KeepScreenOn currentSelection) {
+  List<_RadioEntry> entries = [
+    _RadioEntry(translate('Never'), KeepScreenOn.never.toString()),
+    _RadioEntry(translate('During controlled'), KeepScreenOn.duringControlled.toString()),
+    _RadioEntry(translate('During service is on'), KeepScreenOn.serviceOn.toString()),
+  ];
+
+  if(!_floatingWindowDisabled)
+  {
+      showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: null,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: entries.map((entry) {
+            final value = KeepScreenOn.values.firstWhere((e) => e.toString() == entry.value);
+            return GestureDetector(
+              onTap: () {
+                onOptionSelected(value, context, onChanged);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    Radio<KeepScreenOn>(
+                      value: value,
+                      groupValue: currentSelection,
+                      onChanged: (KeepScreenOn? newValue) {
+                        if (newValue != null) {
+                          onOptionSelected(newValue, context, onChanged);
+                        }
+                      },
+                    ),
+                    Text(entry.label),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+void onOptionSelected(KeepScreenOn value, BuildContext context, Function(KeepScreenOn) onChanged) async {
+  onChanged(value);
+  Navigator.of(context).pop();
+
+  // Assuming bind is an instance of your class that manages these options
+  await bind.mainSetLocalOption(key: kOptionKeepScreenOn, value: _keepScreenOnToOption(value));
+  setState(() => _keepScreenOn = optionToKeepScreenOn(_keepScreenOnToOption(value)));
+  gFFI.serverModel.androidUpdatekeepScreenOn();
+}
+  
   @override
   Widget build(BuildContext context) {
     checkService();
@@ -208,14 +427,170 @@ Future<void> _initializeSettings() async {
                         gFFI.serverModel.isStart
                             ? ServerInfo()
                             : ServiceNotRunningNotification(),
-                        const ConnectionManager(),
+                        //const ConnectionManager(),
                         const PermissionChecker(),
+                         // Settings Section
+                         _buildSettingsSection(context),
                         SizedBox.fromSize(size: const Size(0, 15.0)),
                       ],
                     ),
                   ),
                 )));
   }
+
+
+Widget _buildSettingsSection(BuildContext context) {
+  final List<Widget> settingsRows = [];
+  /*
+ settingsRows.add(PermissionRow(
+     translate('Ignore Battery Optimizations'),
+     _ignoreBatteryOpt,
+     (value) async {
+       setState(() {
+         _ignoreBatteryOpt = value;  // Update state based on toggle
+       });
+       // Handle ignore battery optimization logic
+     },
+   ));*/
+  if (_hasIgnoreBattery) {
+    settingsRows.add(PermissionRow(
+      translate("Ignore Battery Optimizations"),
+      _ignoreBatteryOpt,
+      () {
+        handleBatteryOnBoot(!_ignoreBatteryOpt);
+      },
+    ));
+  }
+  
+  settingsRows.add(PermissionRow(
+      translate("Start on boot"),
+      _enableStartOnBoot,
+      () {
+        handleStartOnBoot(!_enableStartOnBoot);
+      },
+    ));
+  
+ /*
+  settingsRows.add(PermissionRow(
+    translate('Start on Boot'),
+    _enableStartOnBoot,
+    (value) async {
+      setState(() {
+        _enableStartOnBoot = value;  // Update state based on toggle
+      });
+      // Handle start on boot logic
+    },
+  ));*/
+
+  /*
+  settingsRows.add(PermissionRow(
+     translate('Floating window'),
+     !_floatingWindowDisabled,
+     (value) async {
+       setState(() {
+         _floatingWindowDisabled = !value;  // Update state based on toggle
+       });
+       // Handle floating window logic
+     },
+   ));*/
+
+  settingsRows.add(PermissionRow(
+      translate("Floating window"),
+      !_floatingWindowDisabled,
+      () {
+         handleFloatingOnBoot(_floatingWindowDisabled);
+       
+      },
+    ));
+
+/*
+// Use the custom method in your settingsRows
+settingsRows.add(PermissionRow(
+  translate('Keep screen on'),
+  _keepScreenOn != KeepScreenOn.never && !_floatingWindowDisabled, //  _keepScreenOn  never  true
+  //true, // Essentially a dummy value; may need to handle this more specifically
+  () {
+    getPopupDialogRadioEntry(context, (KeepScreenOn value) {
+      setState(() {
+        _keepScreenOn = value; // Update state based on the selection
+      });
+    });
+  },
+));*/
+  
+settingsRows.add(PermissionRow(
+  translate('Keep screen on'),
+  _keepScreenOn != KeepScreenOn.never, //  _keepScreenOn  never  true
+  // true, // Essentially a dummy value; may need to handle this more specifically
+  () {
+    getPopupDialogRadioEntry(
+      context,
+      (KeepScreenOn value) {
+        setState(() {
+          _keepScreenOn = value; // Update state based on the selection
+        });
+      },
+      _keepScreenOn, // Pass the current selection here
+    );
+  },
+));
+  
+  /*
+settingsRows.add(PermissionRow(
+  translate('Keep screen on'),
+  true, // Essentially a dummy value, you may need to handle this more specifically
+  () { // 
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+         title: null, // 
+       // title: Text(translate("")),//Select Keep Screen On Option
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(translate('Never')),
+              onTap: () {
+                setState(() {
+                  _keepScreenOn = KeepScreenOn.never; // Update state
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+            ListTile(
+              title: Text(translate('During controlled')),
+              onTap: () {
+                setState(() {
+                  _keepScreenOn = KeepScreenOn.duringControlled; // Update state
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+            ListTile(
+              title: Text(translate('During service is on')),
+              onTap: () {
+                setState(() {
+                  _keepScreenOn = KeepScreenOn.serviceOn; // Update state
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  },
+));*/
+  
+  return PaddingCard(
+    title: translate("Settings"),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: settingsRows,
+    ),
+  );
+}       
+  
 }
 
 void checkService() async {
@@ -226,6 +601,12 @@ void checkService() async {
         await AndroidPermissionManager.check(kManageExternalStorage));
     debugPrint("file permission finished");
   }
+}
+
+class _RadioEntry {
+  final String label;
+  final String value;
+  _RadioEntry(this.label, this.value);
 }
 
 class ServiceNotRunningNotification extends StatelessWidget {
@@ -252,7 +633,8 @@ class ServiceNotRunningNotification extends StatelessWidget {
                   if (gFFI.userModel.userName.value.isEmpty &&
                       bind.mainGetLocalOption(key: "show-scam-warning") !=
                           "N") {
-                    showScamWarning(context, serverModel);
+                    serverModel.toggleService();
+                    //showScamWarning(context, serverModel);
                   } else {
                     serverModel.toggleService();
                   }
@@ -531,6 +913,7 @@ class ServerInfo extends StatelessWidget {
                   })
             ]).marginOnly(left: 39, bottom: 10),
             // Password
+            /*
             Row(children: [
               const Icon(Icons.lock_outline, color: Colors.grey, size: iconSize)
                   .marginOnly(right: iconMarginRight),
@@ -559,7 +942,7 @@ class ServerInfo extends StatelessWidget {
                                 model.serverPasswd.value.text.trim());
                           })
                     ])
-            ]).marginOnly(left: 40, bottom: 15),
+            ]).marginOnly(left: 40, bottom: 15),*/
             ConnectionStateNotification()
           ],
         ));
@@ -601,8 +984,9 @@ class _PermissionCheckerState extends State<PermissionChecker> {
                   : serverModel.toggleService),
           PermissionRow(translate("Input Control"), serverModel.inputOk,
               serverModel.toggleInput),
+          /*
           PermissionRow(translate("Transfer file"), serverModel.fileOk,
-              serverModel.toggleFile),
+              serverModel.toggleFile),*/
           hasAudioPermission
               ? PermissionRow(translate("Audio Capture"), serverModel.audioOk,
                   serverModel.toggleAudio)
@@ -614,8 +998,8 @@ class _PermissionCheckerState extends State<PermissionChecker> {
                     style: const TextStyle(color: MyTheme.darkGray),
                   ))
                 ]),
-          PermissionRow(translate("Enable clipboard"), serverModel.clipboardOk,
-              serverModel.toggleClipboard),
+          /*PermissionRow(translate("Enable clipboard"), serverModel.clipboardOk,
+              serverModel.toggleClipboard),*/
         ]));
   }
 }
@@ -641,6 +1025,7 @@ class PermissionRow extends StatelessWidget {
   }
 }
 
+/*
 class ConnectionManager extends StatelessWidget {
   const ConnectionManager({Key? key}) : super(key: key);
 
@@ -774,7 +1159,7 @@ class ConnectionManager extends StatelessWidget {
       ])
     ];
   }
-}
+}*/
 
 class PaddingCard extends StatelessWidget {
   const PaddingCard({Key? key, required this.child, this.title, this.titleIcon})
