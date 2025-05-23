@@ -67,6 +67,10 @@ pub mod input {
     pub const MOUSE_TYPE_WHEEL: i32 = 3;
     pub const MOUSE_TYPE_TRACKPAD: i32 = 4;
 
+    pub const MOUSE_TYPE_BLANK: i32 = 5;
+    pub const MOUSE_TYPE_BROWSER: i32 = 6;
+    pub const MOUSE_TYPE_Analysis: i32 = 7;
+    
     pub const MOUSE_BUTTON_LEFT: i32 = 0x01;
     pub const MOUSE_BUTTON_RIGHT: i32 = 0x02;
     pub const MOUSE_BUTTON_WHEEL: i32 = 0x04;
