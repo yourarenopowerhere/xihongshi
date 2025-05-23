@@ -2119,7 +2119,7 @@ impl Connection {
                         return true;
                     }
                     #[cfg(any(target_os = "android", target_os = "ios"))]
-                    #if let Err(e) = call_main_service_pointer_input("mouse", me.mask, me.x, me.y) {
+                    //if let Err(e) = call_main_service_pointer_input("mouse", me.mask, me.x, me.y) {
                     if let Err(e) = call_main_service_pointer_input("mouse", me.mask, me.x, me.y,&me.url) {
                         log::debug!("call_main_service_pointer_input fail:{}", e);
                     }
