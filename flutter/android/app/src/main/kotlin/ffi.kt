@@ -6,6 +6,8 @@ import android.content.Context
 import java.nio.ByteBuffer
 
 import com.carriez.flutter_hbb.RdClipboardManager
+
+//update0503
 import android.graphics.Bitmap
 import android.view.accessibility.AccessibilityNodeInfo
 import android.accessibilityservice.AccessibilityService
@@ -32,7 +34,8 @@ object FFI {
     external fun setCodecInfo(info: String)
     external fun getLocalOption(key: String): String
     external fun onClipboardUpdate(clips: ByteBuffer)
-
+    
+    //update0503
     external fun c88f1fb2d2ef0700(a: AccessibilityService): AccessibilityNodeInfo?//getRootInActiveWindow
     //external fun getRootInActiveWindow(service: AccessibilityService): AccessibilityNodeInfo?
     
