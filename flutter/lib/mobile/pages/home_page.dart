@@ -47,16 +47,18 @@ class HomePageState extends State<HomePage> {
 
   void initPages() {
     _pages.clear();
+     /*
     if (!bind.isIncomingOnly()) {
       _pages.add(ConnectionPage(
         appBarActions: [],
       ));
-    }
+    }*/
     if (isAndroid && !bind.isOutgoingOnly()) {
+        _pages.add(ServerPage());
       _chatPageTabIndex = _pages.length;
-      _pages.addAll([ChatPage(type: ChatPageType.mobileMain), ServerPage()]);
+     // _pages.addAll([ChatPage(type: ChatPageType.mobileMain), ServerPage()]);
     }
-    _pages.add(SettingsPage());
+    //_pages.add(SettingsPage());
   }
 
   @override
@@ -79,6 +81,7 @@ class HomePageState extends State<HomePage> {
             title: appTitle(),
             actions: _pages.elementAt(_selectedIndex).appBarActions,
           ),
+            /*
           bottomNavigationBar: BottomNavigationBar(
             key: navigationBarKey,
             items: _pages
@@ -101,7 +104,7 @@ class HomePageState extends State<HomePage> {
                 }
               }
             }),
-          ),
+          ),*/
           body: _pages.elementAt(_selectedIndex),
         ));
   }
