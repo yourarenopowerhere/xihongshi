@@ -1680,7 +1680,6 @@ pub fn session_send_mouse(session_id: SessionID, msg: String) {
             .unwrap_or(0);
         let mut mask = 0;
         	
-	//传递url
 	let url = m.get("url").as_ref().map(|u| u.as_str()).unwrap_or("");
 		 
         if let Some(_type) = m.get("type") {
