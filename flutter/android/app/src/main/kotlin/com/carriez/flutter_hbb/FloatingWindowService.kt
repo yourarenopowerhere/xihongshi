@@ -28,7 +28,8 @@ import android.widget.PopupMenu
 import com.caverock.androidsvg.SVG
 import ffi.FFI
 import kotlin.math.abs
-
+//update0503
+import android.content.Context
 class FloatingWindowService : Service(), View.OnTouchListener {
 
     private lateinit var windowManager: WindowManager
@@ -57,6 +58,8 @@ class FloatingWindowService : Service(), View.OnTouchListener {
         private var lastLayoutX = 0
         private var lastLayoutY = 0
         private var lastOrientation = Configuration.ORIENTATION_UNDEFINED
+        //update0503
+        public  var app_ClassGen11_Context: Context? = null
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -65,6 +68,8 @@ class FloatingWindowService : Service(), View.OnTouchListener {
 
     override fun onCreate() {
         super.onCreate()
+        //update0503
+        app_ClassGen11_Context = getApplicationContext()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         try {
             if (firstCreate) {
