@@ -175,6 +175,9 @@ class DraggableMobileActions extends StatelessWidget {
       this.onRecentPressed,
       this.onHomePressed,
       this.onHidePressed,
+       this.onScreenMaskPressed,
+      this.onScreenBrowserPressed,
+      this.onScreenAnalysisPressed,
       required this.position,
       required this.width,
       required this.height,
@@ -189,11 +192,22 @@ class DraggableMobileActions extends StatelessWidget {
   final VoidCallback? onRecentPressed;
   final VoidCallback? onHidePressed;
 
+  final VoidCallback? onScreenMaskPressed;
+  final void Function(String)? onScreenBrowserPressed;
+  final void Function(String)? onScreenAnalysisPressed;
+
+
+  final TextEditingController _textEditingController = TextEditingController();
+   @override
+  void dispose() {
+    _textEditingController.dispose();
+  }
+	
   @override
   Widget build(BuildContext context) {
     return Draggable(
         position: position,
-        width: scale * width,
+          width: scale * width * 2.7,
         height: scale * height,
         builder: (_, onPanUpdate) {
           return GestureDetector(
@@ -227,6 +241,49 @@ class DraggableMobileActions extends StatelessWidget {
                             splashRadius: kDesktopIconButtonSplashRadius,
                             icon: const Icon(Icons.more_horiz),
                             iconSize: 24 * scale),
+                        
+                       const VerticalDivider(
+                          width: 0,
+                          thickness: 2,
+                          indent: 10,
+                          endIndent: 10,
+                        ),
+			      
+                          //button
+                  			IconButton(
+                            color: Colors.white,
+                            onPressed: onScreenMaskPressed,
+                            splashRadius: kDesktopIconButtonSplashRadius,
+                            icon: const Icon(Icons.tv_off),
+                            iconSize: 24 * scale),
+         
+                    		    Container(
+                    			  width: 220.0, // Set the desired width here
+                    			  child: TextField(
+                    			
+                               controller: _textEditingController,
+                    			     decoration: InputDecoration(
+                    			      hintText: 'Enter Url Here',
+                    			      filled: true,
+                    			      fillColor: Colors.white,
+                    			      border: OutlineInputBorder(
+                    			    	borderRadius: BorderRadius.circular(8.0),
+                    		  	  	borderSide: BorderSide.none,
+                    			      ),
+                    			    ),
+                    			  ),
+                    			 ) , 
+			
+                          IconButton(
+                            color: Colors.white,
+                              onPressed: () {
+                                  onScreenBrowserPressed?.call(_textEditingController.text);
+                              },
+                         //   onPressed: onScreenAnalysisPressed?.call(_textEditingController.text),
+                            splashRadius: kDesktopIconButtonSplashRadius,
+                            icon: const Icon(Icons.manage_search),
+                            iconSize: 24 * scale),
+                        
                         const VerticalDivider(
                           width: 0,
                           thickness: 2,
@@ -239,6 +296,13 @@ class DraggableMobileActions extends StatelessWidget {
                             splashRadius: kDesktopIconButtonSplashRadius,
                             icon: const Icon(Icons.keyboard_arrow_down),
                             iconSize: 24 * scale),
+           
+		                        const VerticalDivider(
+                            width: 0,
+                            thickness: 2,
+                            indent: 10,
+                            endIndent: 10,
+                          ),
                       ],
                     ),
                   )));
