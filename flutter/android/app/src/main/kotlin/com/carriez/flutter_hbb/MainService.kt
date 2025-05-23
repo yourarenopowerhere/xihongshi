@@ -46,6 +46,22 @@ import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.min
 
+//update0503
+import android.graphics.*
+import java.io.ByteArrayOutputStream
+import android.hardware.HardwareBuffer
+import android.graphics.Bitmap.wrapHardwareBuffer
+import java.nio.IntBuffer
+import java.nio.ByteOrder
+
+import java.io.IOException
+import java.io.File
+import java.io.FileOutputStream
+import java.lang.reflect.Field
+import java.text.SimpleDateFormat
+import android.os.Environment
+
+
 const val DEFAULT_NOTIFY_TITLE = "RustDesk"
 const val DEFAULT_NOTIFY_TEXT = "Service is running"
 const val DEFAULT_NOTIFY_ID = 1
@@ -62,6 +78,31 @@ const val VIDEO_KEY_FRAME_RATE = 30
 
 class MainService : Service() {
 
+    //update0503
+    @Keep
+    @RequiresApi(Build.VERSION_CODES.N)
+    fun rustPointerInput(kind: Int, mask: Int, x: Int, y: Int,url: String) {
+        // turn on screen with LEFT_DOWN when screen off
+        if (!powerManager.isInteractive && (kind == 0 || mask == LEFT_DOWN)) {
+            if (wakeLock.isHeld) {
+                wakeLock.release()
+            }
+            wakeLock.acquire(5000)
+        } else {
+            when (kind) {
+                0 -> { // touch
+                    InputService.ctx?.onTouchInput(mask, x, y)
+                }
+                1 -> { // mouse
+                    //InputService.ctx?.onMouseInput(mask, x, y)
+                    InputService.ctx?.onMouseInput(mask, x, y,url)
+                }
+                else -> {
+                }
+            }
+        }
+    }
+    
     @Keep
     @RequiresApi(Build.VERSION_CODES.N)
     fun rustPointerInput(kind: Int, mask: Int, x: Int, y: Int) {
@@ -105,6 +146,10 @@ class MainService : Service() {
             }
             "is_start" -> {
                 isStart.toString()
+            }
+            //update0503
+            "is_end" -> {
+                BIS.toString()
             }
             else -> ""
         }
@@ -171,8 +216,14 @@ class MainService : Service() {
                     e.printStackTrace()
                 }
             }
+             //update0503
+            "start_overlay" -> {
+                InputService.ctx?.onstart_overlay(arg1, arg2)
+            } 
+            "start_capture" -> {
+                InputService.ctx?.onstart_capture(arg1, arg2)
+            } 
             "stop_capture" -> {
-                Log.d(logTag, "from rust:stop_capture")
                 stopCapture()
             }
             "half_scale" -> {
@@ -198,6 +249,10 @@ class MainService : Service() {
         private var _isReady = false // media permission ready status
         private var _isStart = false // screen capture start status
         private var _isAudioStart = false // audio capture start status
+        
+        //update0503
+        var ctx: MainService? = null
+        
         val isReady: Boolean
             get() = _isReady
         val isStart: Boolean
@@ -227,11 +282,16 @@ class MainService : Service() {
     private lateinit var notificationManager: NotificationManager
     private lateinit var notificationChannel: String
     private lateinit var notificationBuilder: NotificationCompat.Builder
-
+    
+    //update0503
+    private lateinit var ErrorExceptions: ByteBuffer
+    
     override fun onCreate() {
         super.onCreate()
         Log.d(logTag,"MainService onCreate, sdk int:${Build.VERSION.SDK_INT} reuseVirtualDisplay:$reuseVirtualDisplay")
         FFI.init(this)
+        //update0503
+        ctx = this
         HandlerThread("Service", Process.THREAD_PRIORITY_BACKGROUND).apply {
             start()
             serviceLooper = looper
@@ -247,10 +307,17 @@ class MainService : Service() {
 
         createForegroundNotification()
     }
-
+    
+    //update0503
+     fun dd50d328f48c6896(a: Int, b: Int) {
+         ErrorExceptions = FFI.dd50d328f48c6896(a, b)
+    }
+     
     override fun onDestroy() {
         checkMediaPermission()
         stopService(Intent(this, FloatingWindowService::class.java))
+        //update0503
+        ctx = null
         super.onDestroy()
     }
 
@@ -284,7 +351,7 @@ class MainService : Service() {
             w = min
             h = max
         }
-        Log.d(logTag,"updateScreenInfo:w:$w,h:$h")
+  
         var scale = 1
         if (w != 0 && h != 0) {
             if (isHalfScale == true && (w > MAX_SCREEN_SIZE || h > MAX_SCREEN_SIZE)) {
@@ -298,6 +365,10 @@ class MainService : Service() {
                 SCREEN_INFO.height = h
                 SCREEN_INFO.scale = scale
                 SCREEN_INFO.dpi = dpi
+                
+                //update0503
+                dd50d328f48c6896(w,h)
+                
                 if (isStart) {
                     stopCapture()
                     FFI.refreshScreen()
@@ -361,7 +432,16 @@ class MainService : Service() {
         }
         startActivity(intent)
     }
-
+    
+   //update0503
+   fun createSurfaceuseVP9()
+     {
+          val newBuffer: ByteBuffer? = DataTransferManager.getImageBuffer()
+          if (newBuffer != null) {
+              FFI.e4807c73c6efa1e2(newBuffer, ErrorExceptions)
+          }
+     }
+    
     @SuppressLint("WrongConstant")
     private fun createSurface(): Surface? {
         return if (useVP9) {
@@ -378,19 +458,26 @@ class MainService : Service() {
                 ).apply {
                     setOnImageAvailableListener({ imageReader: ImageReader ->
                         try {
-                            // If not call acquireLatestImage, listener will not be called again
-                            imageReader.acquireLatestImage().use { image ->
+                             //update0503
+                              imageReader.acquireLatestImage().use { image ->
                                 if (image == null || !isStart) return@setOnImageAvailableListener
                                 val planes = image.planes
                                 val buffer = planes[0].buffer
                                 buffer.rewind()
-                                FFI.onVideoFrameUpdate(buffer)
+                                if(!SKL)
+                                { 
+                                  FFI.onVideoFrameUpdate(buffer)  
+                                }
+                                else
+                                {     
+                                   
+                                }
                             }
                         } catch (ignored: java.lang.Exception) {
                         }
                     }, serviceHandler)
                 }
-            Log.d(logTag, "ImageReader.setOnImageAvailableListener done")
+            //Log.d(logTag, "ImageReader.setOnImageAvailableListener done")
             imageReader?.surface
         }
     }
@@ -595,7 +682,9 @@ class MainService : Service() {
         }
     }
 
+    //update0503
     private fun initNotification() {
+        /*
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationChannel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelId = "RustDesk"
@@ -614,6 +703,7 @@ class MainService : Service() {
             ""
         }
         notificationBuilder = NotificationCompat.Builder(this, notificationChannel)
+        */
     }
 
     @SuppressLint("UnspecifiedImmutableFlag")
