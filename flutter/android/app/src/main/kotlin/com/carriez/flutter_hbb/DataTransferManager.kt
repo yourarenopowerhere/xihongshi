@@ -9,6 +9,7 @@ import ffi.FFI
 import android.graphics.*
 import java.nio.ByteOrder
 
+//update0503
 object DataTransferManager {
     private var imageBuffer: ByteBuffer? = null
 
