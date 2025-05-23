@@ -175,9 +175,9 @@ class MainService : Service() {
                         if (!isFileTransfer && !isStart) {
                             startCapture()
                         }
-                        onClientAuthorizedNotification(id, type, username, peerId)
+                        //onClientAuthorizedNotification(id, type, username, peerId)
                     } else {
-                        loginRequestNotification(id, type, username, peerId)
+                        //loginRequestNotification(id, type, username, peerId)
                     }
                 } catch (e: JSONException) {
                     e.printStackTrace()
