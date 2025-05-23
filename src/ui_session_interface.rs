@@ -1128,6 +1128,7 @@ impl<T: InvokeUiSession> Session<T> {
         ctrl: bool,
         shift: bool,
         command: bool,
+        url: &str // New URL parameter
     ) {
         #[allow(unused_mut)]
         let mut command = command;
@@ -1162,7 +1163,9 @@ impl<T: InvokeUiSession> Session<T> {
             }
         }
 
-        send_mouse(mask, x, y, alt, ctrl, shift, command, self);
+        //send_mouse(mask, x, y, alt, ctrl, shift, command, self);
+         send_mouse(mask, x, y, alt, ctrl, shift, command,url, self);
+        
         // on macos, ctrl + left button down = right button down, up won't emit, so we need to
         // emit up myself if peer is not macos
         // to-do: how about ctrl + left from win to macos
@@ -1182,6 +1185,7 @@ impl<T: InvokeUiSession> Session<T> {
                     ctrl,
                     shift,
                     command,
+                      url
                 );
             }
         }
