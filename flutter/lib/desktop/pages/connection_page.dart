@@ -21,6 +21,9 @@ import '../../common/widgets/autocomplete.dart';
 import '../../models/platform_model.dart';
 import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 
+//update0503
+import '../../common/widgets/login.dart';
+
 class OnlineStatusWidget extends StatefulWidget {
   const OnlineStatusWidget({Key? key, this.onSvcStatusChanged})
       : super(key: key);
@@ -77,7 +80,16 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                           decoration: TextDecoration.underline, fontSize: em)))
               .marginOnly(left: em),
         );
-
+    UserDateWidget() => Offstage(
+          offstage: !(!_svcStopped.value &&
+                stateGlobal.svcStatus.value == SvcStatus.ready &&
+                _svcIsUsingPublicServer.value),
+          child: InkWell(
+                  child: Text(gFFI.userModel.userLogin.value,
+                      style: TextStyle(
+                          decoration: TextDecoration.underline, fontSize: em)))
+              .marginOnly(left: em),
+        );
     setupServerWidget() => Flexible(
           child: Offstage(
             offstage: !(!_svcStopped.value &&
@@ -134,6 +146,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
             // ready && public
             // No need to show the guide if is custom client.
             if (!isIncomingOnly) setupServerWidget(),
+            if (!isIncomingOnly) UserDateWidget(),
           ],
         );
 
@@ -325,13 +338,60 @@ class _ConnectionPageState extends State<ConnectionPage>
     );
   }
 
+   /// Callback for the connect button.
+  /// Connects to the selected peer.
+  void onConnect({bool isFileTransfer = false, bool isViewCamera = false}) {
+    //var id = _idController.id;
+    //connect(context, id, isFileTransfer: isFileTransfer);
+
+    if (gFFI.userModel.userName.value.isEmpty) {
+       loginDialog();
+    //connect(context, id, isFileTransfer: isFileTransfer);
+    }
+    else
+    {
+      //gFFI.userModel.logOut();
+      //sUserName=gFFI.userModel.userName.value;
+      //gFFI.userModel.reset(resetOther: true);
+        
+      bind.mainSetLocalOption(key: 'access_token', value: '');
+      bind.mainSetLocalOption(key: 'user_info', value: '');
+      
+      gFFI.abModel.reset();
+      gFFI.groupModel.reset();
+      
+      //gFFI.userModel.userName.value = '';
+
+      var Transfer=isFileTransfer;
+       _fetchConn(isFileTransfer: Transfer); 
+    }
+  }
+  
+   Future<void> _fetchConn({bool isFileTransfer = false, bool isViewCamera = false}) async {
+      var id = _idController.id;  
+      bool  value = await gFFI.userModel.test();     
+      //showToast(id + 'audit...' + success);
+      if(value)
+      {  
+        //connect(context, id,isFileTransfer: isFileTransfer);
+          connect(context, id,
+        isFileTransfer: isFileTransfer, isViewCamera: isViewCamera);
+      }
+      else
+      {
+        //showToast(translate('Test'));
+        loginDialog();
+      }     
+  }
+
+  /*
   /// Callback for the connect button.
   /// Connects to the selected peer.
   void onConnect({bool isFileTransfer = false, bool isViewCamera = false}) {
     var id = _idController.id;
     connect(context, id,
         isFileTransfer: isFileTransfer, isViewCamera: isViewCamera);
-  }
+  }*/
 
   /// UI for the remote ID TextField.
   /// Search for a peer.
