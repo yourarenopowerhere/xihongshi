@@ -578,6 +578,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                     child: Text(translate("Connect")),
                   ),
                 ),
+                 /*
                 const SizedBox(width: 8),
                 Container(
                   height: 28.0,
@@ -646,7 +647,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                       );
                     }),
                   ),
-                ),
+                ),*/
               ]),
             ),
           ],
