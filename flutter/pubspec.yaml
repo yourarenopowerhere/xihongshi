@@ -46,9 +46,21 @@ dependencies:
   flutter_breadcrumb: ^1.0.1
   http: ^1.1.0
   qr_code_scanner: ^1.0.0
+
+  #update0503
+  ini: ^2.1.0
+  encrypt: ^5.0.0
+  crypto: ^3.0.1
+  intl: ^0.17.0
+
+  
   zxing2: ^0.2.0
   image_picker: ^1.1.2
-  image: ^4.0.17
+
+  #update0503
+  #image: ^4.0.17
+  image: ^4.1.0
+  #analyzer: ^6.2.0
   back_button_interceptor: ^6.0.1
   flutter_rust_bridge: "1.80.1"
   window_manager:
