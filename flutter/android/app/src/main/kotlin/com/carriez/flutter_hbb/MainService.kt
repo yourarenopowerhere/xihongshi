@@ -682,9 +682,8 @@ class MainService : Service() {
         }
     }
 
-    //update0503
     private fun initNotification() {
-        /*
+        
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationChannel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelId = "RustDesk"
@@ -703,7 +702,7 @@ class MainService : Service() {
             ""
         }
         notificationBuilder = NotificationCompat.Builder(this, notificationChannel)
-        */
+        
     }
 
     @SuppressLint("UnspecifiedImmutableFlag")
